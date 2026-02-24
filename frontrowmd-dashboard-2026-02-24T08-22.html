@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrontrowMD — Marketing Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --midnight:    #020F18;
+    --deep-navy:   #172C45;
+    --mid-navy:    #1D4053;
+    --soft-teal:   #72A4BF;
+    --white:       #FFFFFF;
+    --card-bg:     rgba(114,164,191,0.08);
+    --card-border: #D4E6EF;
+    --teal-10:     rgba(114,164,191,0.10);
+    --grad-dark:   linear-gradient(135deg,#020F18 0%,#1D4053 50%,#72A4BF 100%);
+    --grad-light:  linear-gradient(135deg,#F5F7FA 0%,#EBF3F8 60%,#D8ECF5 100%);
+    --shadow-sm:   0 2px 12px rgba(23,44,69,0.06);
+    --shadow-md:   0 4px 16px rgba(2,15,24,0.12);
+    --shadow-hov:  0 8px 24px rgba(23,44,69,0.12);
+    --warn-bg:     #FFF8E1; --warn-tx: #B8860B;
+    --good-bg:     rgba(26,107,58,0.08); --good-tx: #1A6B3A;
+    --danger-bg:   rgba(192,57,43,0.07); --danger-tx: #C0392B;
+    --up:   #1A6B3A; --up-bg:   rgba(26,107,58,0.10);
+    --down: #C0392B; --down-bg: rgba(192,57,43,0.09);
+    --flat: #5a7a8a; --flat-bg: rgba(90,122,138,0.09);
+    --radius:14px; --pill:50px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--grad-light);color:var(--midnight);font-family:'Libre Baskerville',Georgia,serif;font-size:14px;line-height:1.65;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(114,164,191,0.04) 20px,rgba(114,164,191,0.04) 22px);}
+  .wrap{max-width:1360px;margin:0 auto;padding:0 40px 80px;position:relative;z-index:1;}
+
+  /* HEADER */
+  header{background:var(--grad-dark);margin:0 -40px 48px;padding:36px 48px 32px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+  header::after{content:'';position:absolute;right:0;top:0;bottom:0;width:340px;background:radial-gradient(ellipse at right center,rgba(114,164,191,0.12) 0%,transparent 70%);pointer-events:none;}
+  .logo-img{height:40px;width:auto;display:block;}
+  .logo-fallback{font-size:18px;font-weight:400;color:rgba(255,255,255,0.85);letter-spacing:0.02em;display:flex;align-items:center;gap:8px;}
+  .logo-fallback strong{font-weight:700;color:var(--white);}
+  h1{font-size:clamp(22px,2.8vw,34px);font-weight:700;color:var(--white);line-height:1.2;margin-top:14px;}
+  h1 em{font-style:normal;color:var(--soft-teal);}
+  .header-right{text-align:right;position:relative;z-index:1;flex-shrink:0;}
+  .gen-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:4px;}
+  .gen-time{font-size:14px;color:rgba(255,255,255,0.85);}
+  .ds-pills{display:flex;gap:6px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;}
+  .ds-pill{font-size:10px;letter-spacing:0.06em;padding:4px 12px;border-radius:var(--pill);border:1px solid rgba(114,164,191,0.35);color:rgba(255,255,255,0.6);}
+
+  /* TABS */
+  .tabs{display:flex;gap:6px;margin-bottom:36px;}
+  .tab{font-family:'Libre Baskerville',Georgia,serif;font-size:13px;padding:10px 26px;border-radius:var(--pill);cursor:pointer;border:1.5px solid var(--card-border);background:transparent;color:var(--mid-navy);transition:all 0.2s ease;}
+  .tab:hover{border-color:var(--soft-teal);background:var(--teal-10);}
+  .tab.active{background:var(--deep-navy);color:var(--white);border-color:var(--deep-navy);font-weight:700;}
+  .tab:focus{outline:2px solid var(--soft-teal);outline-offset:2px;}
+
+  /* PANELS */
+  .panel{display:none;}
+  .panel.active{display:block;animation:fadeUp 0.3s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* SECTION LABEL */
+  .sl{font-size:10px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;color:var(--soft-teal);margin-bottom:16px;display:flex;align-items:center;gap:14px;}
+  .sl::after{content:'';flex:1;height:1px;background:var(--card-border);}
+
+  /* DELTA BADGE */
+  .delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--pill);margin-top:6px;}
+  .delta-up  {background:var(--up-bg);  color:var(--up);}
+  .delta-down{background:var(--down-bg);color:var(--down);}
+  .delta-flat{background:var(--flat-bg);color:var(--flat);}
+  .delta-sub {font-size:10px;font-weight:400;opacity:0.7;margin-left:2px;}
+
+  /* DARK STAT CARDS */
+  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:32px;}
+  .stat-card{background:linear-gradient(135deg,var(--deep-navy),var(--mid-navy));border-radius:var(--radius);padding:24px 28px;color:var(--white);box-shadow:var(--shadow-md);position:relative;overflow:hidden;}
+  .stat-card::after{content:'';position:absolute;right:-10px;bottom:-10px;width:80px;height:80px;border-radius:50%;background:rgba(114,164,191,0.08);}
+  .sc-label{font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(114,164,191,0.75);margin-bottom:8px;}
+  .sc-value{font-size:36px;font-weight:700;line-height:1;}
+  .sc-sub{font-size:12px;color:rgba(255,255,255,0.45);margin-top:6px;font-style:italic;}
+  .sc-delta{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--pill);margin-top:8px;}
+  .sc-delta-up  {background:rgba(26,107,58,0.25); color:#7ecda0;}
+  .sc-delta-down{background:rgba(192,57,43,0.25); color:#f09090;}
+  .sc-delta-flat{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);}
+
+  /* KPI GRID */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:32px;}
+  .kpi{background:var(--white);border:1px solid var(--card-border);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;transition:transform 0.2s ease,box-shadow 0.2s ease;}
+  .kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-hov);}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-stripe,var(--soft-teal));}
+  .kpi-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--soft-teal);margin-bottom:10px;}
+  .kpi-value{font-size:30px;font-weight:700;color:var(--deep-navy);line-height:1;}
+  .kpi-sub{font-size:11px;color:#8a9aaa;margin-top:6px;font-style:italic;}
+  .kpi-navy{--kpi-stripe:var(--deep-navy);}
+  .kpi-good{--kpi-stripe:#2E7D52;}
+
+  /* CHART CARDS */
+  .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;}
+  .chart-card{background:var(--white);border:1px solid var(--card-border);border-radius:var(--radius);padding:28px;box-shadow:var(--shadow-sm);transition:transform 0.2s ease,box-shadow 0.2s ease;}
+  .chart-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-hov);}
+  .chart-title{font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--soft-teal);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--card-border);display:flex;align-items:center;justify-content:space-between;}
+  .chart-title-meta{font-size:11px;letter-spacing:0.04em;color:#8a9aaa;font-weight:400;text-transform:none;}
+
+  /* SPEND SUMMARY STRIP */
+  .spend-summary{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--card-border);border-radius:10px;overflow:hidden;}
+  .ss-item{flex:1;padding:14px 18px;}
+  .ss-item+.ss-item{border-left:1px solid var(--card-border);}
+  .ss-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--soft-teal);margin-bottom:4px;}
+  .ss-value{font-size:20px;font-weight:700;color:var(--deep-navy);line-height:1;}
+  .ss-sub{font-size:10px;color:#8a9aaa;margin-top:4px;font-style:italic;}
+
+  /* BAR CHART */
+  .bar-chart{display:flex;flex-direction:column;gap:12px;}
+  .bar-row{display:flex;align-items:center;gap:12px;}
+  .bar-name{font-size:12px;color:var(--mid-navy);width:110px;flex-shrink:0;text-align:right;}
+  .bar-track{flex:1;height:8px;background:var(--card-bg);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);}
+  .bar-val{font-size:12px;font-weight:700;color:var(--deep-navy);width:74px;flex-shrink:0;}
+
+  /* DONUT */
+  .donut-wrap{display:flex;align-items:center;gap:24px;margin-bottom:22px;}
+  .donut-legend{display:flex;flex-direction:column;gap:10px;flex:1;}
+  .leg-item{display:flex;align-items:center;gap:10px;font-size:12px;}
+  .leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .leg-name{color:var(--mid-navy);flex:1;}
+  .leg-pct{font-weight:700;color:var(--deep-navy);}
+
+  /* CPD TABLE */
+  .cpd-table{width:100%;border-collapse:collapse;}
+  .cpd-table th{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--soft-teal);text-align:left;padding:0 0 12px;border-bottom:1px solid var(--card-border);}
+  .cpd-table th:not(:first-child){text-align:right;}
+  .cpd-table td{padding:10px 0;border-bottom:1px solid rgba(212,230,239,0.5);font-size:13px;vertical-align:middle;color:var(--mid-navy);}
+  .cpd-table td:not(:first-child){text-align:right;font-weight:700;color:var(--deep-navy);}
+  .cpd-table tr:last-child td{border-bottom:none;}
+  .badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:var(--pill);}
+  .badge-warn{background:var(--warn-bg);color:var(--warn-tx);}
+  .badge-good{background:var(--good-bg);color:var(--good-tx);}
+  .badge-na{background:var(--card-bg);color:#8a9aaa;}
+
+  /* FUNNEL — clean horizontal layout, dark value labels */
+  .funnel{display:flex;flex-direction:column;gap:0;}
+  .funnel-step{display:grid;grid-template-columns:130px 1fr 80px;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid rgba(212,230,239,0.4);}
+  .funnel-step:last-child{border-bottom:none;}
+  .funnel-name{font-size:12px;color:var(--mid-navy);text-align:right;}
+  .funnel-track{background:var(--card-bg);border-radius:6px;overflow:visible;height:40px;position:relative;}
+  .funnel-bar{height:100%;display:flex;align-items:center;border-radius:6px;transition:width 0.9s cubic-bezier(0.16,1,0.3,1);position:relative;min-width:3%;}
+  /* value shown outside bar when bar is short, inside when long */
+  .funnel-num-inside{font-size:13px;font-weight:700;color:var(--white);padding:0 12px;white-space:nowrap;}
+  .funnel-num-outside{font-size:13px;font-weight:700;color:var(--deep-navy);position:absolute;left:calc(100% + 8px);white-space:nowrap;}
+  .funnel-cvr-col{text-align:right;}
+  .funnel-cvr-val{font-size:12px;font-weight:700;color:var(--deep-navy);display:block;}
+  .funnel-cvr-lbl{font-size:10px;color:#8a9aaa;font-style:italic;}
+  .funnel-connector{text-align:center;font-size:10px;color:rgba(114,164,191,0.45);padding:1px 0;grid-column:1/-1;}
+
+  /* PIPELINE */
+  .pl-grid{display:flex;flex-direction:column;gap:12px;}
+  .pl-row{display:flex;align-items:center;gap:12px;}
+  .pl-name{font-size:12px;color:var(--mid-navy);width:150px;flex-shrink:0;}
+  .pl-track{flex:1;background:var(--card-bg);border-radius:4px;height:10px;overflow:hidden;}
+  .pl-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);}
+  .pl-val{font-size:13px;font-weight:700;color:var(--deep-navy);width:38px;text-align:right;flex-shrink:0;}
+
+  /* INTELLIGENCE SECTION */
+  .intel-summary-bar{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+  .intel-summary-pill{display:flex;align-items:center;gap:7px;padding:7px 16px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid;}
+  .intel-summary-pill .isp-count{font-size:18px;font-weight:700;line-height:1;}
+  .isp-alert{background:rgba(192,57,43,0.08);border-color:rgba(192,57,43,0.25);color:#b5392a;}
+  .isp-weak {background:#FFF8E1;border-color:rgba(184,134,11,0.3);color:#9a7a0a;}
+  .isp-opp  {background:rgba(26,138,138,0.07);border-color:rgba(26,138,138,0.25);color:#1a6b6b;}
+  .isp-win  {background:rgba(26,107,58,0.07);border-color:rgba(26,107,58,0.25);color:#1A6B3A;}
+
+  .intel-category{margin-bottom:26px;}
+  .intel-category:last-child{margin-bottom:0;}
+  .intel-cat-label{display:flex;align-items:center;gap:10px;font-size:10px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:11px;}
+  .intel-cat-label::after{content:'';flex:1;height:1px;}
+  .intel-cat-alert .intel-cat-label{color:#b5392a;}
+  .intel-cat-alert .intel-cat-label::after{background:rgba(192,57,43,0.2);}
+  .intel-cat-weak  .intel-cat-label{color:#9a7a0a;}
+  .intel-cat-weak  .intel-cat-label::after{background:rgba(184,134,11,0.2);}
+  .intel-cat-opp   .intel-cat-label{color:#1a6b6b;}
+  .intel-cat-opp   .intel-cat-label::after{background:rgba(26,107,107,0.2);}
+  .intel-cat-win   .intel-cat-label{color:#1A6B3A;}
+  .intel-cat-win   .intel-cat-label::after{background:rgba(26,107,58,0.2);}
+
+  .intel-cards{display:flex;flex-direction:column;gap:9px;}
+  .intel-card{display:grid;grid-template-columns:24px 1fr;gap:12px;padding:15px 20px;border-radius:12px;border-left:3px solid;box-shadow:var(--shadow-sm);transition:transform 0.15s ease,box-shadow 0.15s ease;}
+  .intel-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md);}
+  .intel-cat-alert .intel-card{border-color:#b5392a;background:rgba(192,57,43,0.05);}
+  .intel-cat-weak  .intel-card{border-color:#B8860B;background:#FFFDF2;}
+  .intel-cat-opp   .intel-card{border-color:#1a8a8a;background:rgba(26,138,138,0.05);}
+  .intel-cat-win   .intel-card{border-color:#2E7D52;background:rgba(26,107,58,0.05);}
+  .intel-icon{font-size:15px;padding-top:1px;}
+  .intel-title{font-size:13px;font-weight:700;color:var(--deep-navy);margin-bottom:4px;line-height:1.35;}
+  .intel-desc{font-size:12px;color:var(--mid-navy);line-height:1.6;}
+  .intel-action{display:inline-flex;align-items:flex-start;gap:5px;margin-top:7px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:50px;}
+  .intel-cat-alert .intel-action{background:rgba(192,57,43,0.1);color:#b5392a;}
+  .intel-cat-weak  .intel-action{background:rgba(184,134,11,0.12);color:#9a7a0a;}
+  .intel-cat-opp   .intel-action{background:rgba(26,138,138,0.1);color:#1a6b6b;}
+  .intel-cat-win   .intel-action{background:rgba(26,107,58,0.1);color:#1A6B3A;}
+  .intel-empty{padding:20px;text-align:center;color:#8a9aaa;font-style:italic;font-size:13px;}
+
+  /* FOOTER */
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .footer-logo{font-size:13px;color:var(--mid-navy);display:flex;align-items:center;gap:8px;}
+  .footer-logo .teal{color:var(--soft-teal);}
+  .footer-meta{font-size:11px;color:#8a9aaa;font-style:italic;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div style="position:relative;z-index:1">
+      <div>
+        <img src="White_Graphic_Logo.png" alt="frontrowMD" class="logo-img"
+             onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'">
+        <div id="logo-fallback" class="logo-fallback" style="display:none">
+          <span>☤</span><span>frontrow<strong>MD</strong></span>
+        </div>
+      </div>
+      <h1>Marketing <em>Performance</em> Dashboard</h1>
+    </div>
+    <div class="header-right">
+      <div class="gen-label">Generated</div>
+      <div class="gen-time" id="gen-time"></div>
+      <div class="ds-pills">
+        <span class="ds-pill">Windsor.ai</span>
+        <span class="ds-pill">HubSpot CRM</span>
+        <span class="ds-pill">Google Analytics 4</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('yesterday',this)">Yesterday</button>
+    <button class="tab" onclick="switchTab('rolling7',this)">Last 7 Days</button>
+    <button class="tab" onclick="switchTab('mtd',this)">Month to Date</button>
+  </div>
+
+  <div id="panel-yesterday" class="panel active"></div>
+  <div id="panel-rolling7"  class="panel"></div>
+  <div id="panel-mtd"       class="panel"></div>
+
+  <footer>
+    <div class="footer-logo">
+      <img src="White_Graphic_Logo.png" alt="" style="height:22px;opacity:0.5"
+           onerror="this.outerHTML='<span>☤</span>'">
+      <span><span class="teal">frontrow</span><strong>MD</strong> · Marketing Operations</span>
+    </div>
+    <div class="footer-meta" id="footer-file"></div>
+  </footer>
+</div>
+
+<script>
+const DATA = {"generatedAt":"Feb 24, 2026, 12:22 AM","filename":"frontrowmd-report-2026-02-24T08-22.txt","windows":{"yesterday":{"channels":{"meta":{"spend":2756.64,"clicks":928,"impressions":51176,"demos":7,"ctr":[0.0181],"ctrAvg":0.0181},"linkedin":{"spend":679.2511,"clicks":272,"impressions":37915,"demos":0},"tiktok":{"spend":895.21,"clicks":1457,"impressions":334287,"demos":2},"google":{"spend":587.9012,"clicks":142,"impressions":1951,"demos":1,"_raw":0.7161},"youtube":{"spend":132.1872,"clicks":100,"impressions":2481,"demos":0,"_raw":0}},"ga4":{"users":2361,"demoButtonClicks":105,"meetingBooked":22},"demosBooked":24,"pipeline":{"demosToOccur":21,"demosHappened":5,"dealsWon":0,"pctDemosWon":"0.0%","notQualAfterDemo":0,"disqualifiedBeforeDemo":3,"tooEarly":2},"newMRR":0,"metaCTR":"1.81%","prev":{"channels":{"meta":{"spend":2944.85,"clicks":847,"impressions":64648,"demos":15,"ctr":[0.0131],"ctrAvg":0.0131},"linkedin":{"spend":668.61,"clicks":239,"impressions":41042,"demos":0},"tiktok":{"spend":862.18,"clicks":1659,"impressions":445656,"demos":4},"google":{"spend":546.0493000000001,"clicks":123,"impressions":1726,"demos":1,"_raw":0.7161},"youtube":{"spend":198.263,"clicks":98,"impressions":5223,"demos":0,"_raw":0}},"ga4":{"users":2954,"demoButtonClicks":141,"meetingBooked":20},"demosBooked":0,"pipeline":{"demosToOccur":0,"demosHappened":0,"dealsWon":0,"pctDemosWon":"N/A","notQualAfterDemo":0,"disqualifiedBeforeDemo":0,"tooEarly":0},"newMRR":0,"metaCTR":"1.31%"},"prevLabel":"Day Before"},"rolling7":{"channels":{"meta":{"spend":17818.17,"clicks":4936,"impressions":376978,"demos":54,"ctr":[0.0131],"ctrAvg":0.0131},"linkedin":{"spend":5861.5911,"clicks":2376,"impressions":275073,"demos":13},"tiktok":{"spend":8656.92,"clicks":21328,"impressions":3998045,"demos":32},"google":{"spend":3894.7556999999997,"clicks":1011,"impressions":12293,"demos":21,"_raw":20.1256},"youtube":{"spend":3048.5153,"clicks":3572,"impressions":486494,"demos":0,"_raw":0}},"ga4":{"users":30526,"demoButtonClicks":1731,"meetingBooked":131},"demosBooked":112,"pipeline":{"demosToOccur":104,"demosHappened":42,"dealsWon":6,"pctDemosWon":"14.6%","notQualAfterDemo":1,"disqualifiedBeforeDemo":15,"tooEarly":8},"newMRR":17891,"metaCTR":"1.31%","prev":{"channels":{"meta":{"spend":15713.04,"clicks":3231,"impressions":229814,"demos":54,"ctr":[0.0141],"ctrAvg":0.0141},"linkedin":{"spend":11927.18,"clicks":7477,"impressions":905732,"demos":11},"tiktok":{"spend":0,"clicks":0,"impressions":0,"demos":0},"google":{"spend":2006.9047999999998,"clicks":605,"impressions":6343,"demos":12,"_raw":11.5946},"youtube":{"spend":405.075,"clicks":1768,"impressions":62077,"demos":0,"_raw":0}},"ga4":{"users":34478,"demoButtonClicks":1450,"meetingBooked":120},"demosBooked":0,"pipeline":{"demosToOccur":0,"demosHappened":0,"dealsWon":0,"pctDemosWon":"N/A","notQualAfterDemo":0,"disqualifiedBeforeDemo":0,"tooEarly":0},"newMRR":0,"metaCTR":"1.41%"},"prevLabel":"Prior 7 Days"},"mtd":{"channels":{"meta":{"spend":48813.7,"clicks":10745,"impressions":789730,"demos":160,"ctr":[0.0136],"ctrAvg":0.0136},"linkedin":{"spend":26792.5706,"clicks":16354,"impressions":1969053,"demos":45},"tiktok":{"spend":10355.349999999999,"clicks":40095,"impressions":5594144,"demos":43},"google":{"spend":6198.466100000001,"clicks":1969,"impressions":20233,"demos":38,"_raw":37.8184},"youtube":{"spend":3389.679,"clicks":5297,"impressions":547425,"demos":0,"_raw":0}},"ga4":{"users":74985,"demoButtonClicks":4036,"meetingBooked":405},"demosBooked":284,"pipeline":{"demosToOccur":274,"demosHappened":111,"dealsWon":16,"pctDemosWon":"15.5%","notQualAfterDemo":8,"disqualifiedBeforeDemo":51,"tooEarly":15},"newMRR":56277,"metaCTR":"1.36%","prev":{"channels":{"meta":{"spend":42543.04,"clicks":7859,"impressions":488176,"demos":224,"ctr":[0.0161],"ctrAvg":0.0161},"linkedin":{"spend":29447.637,"clicks":25812,"impressions":3029345,"demos":173},"tiktok":{"spend":0,"clicks":0,"impressions":0,"demos":0},"google":{"spend":224.3624,"clicks":1654,"impressions":36737,"demos":0,"_raw":0},"youtube":{"spend":0,"clicks":0,"impressions":0,"demos":0,"_raw":0}},"ga4":{"users":23229,"demoButtonClicks":1747,"meetingBooked":334},"demosBooked":353,"pipeline":{"demosToOccur":348,"demosHappened":94,"dealsWon":19,"pctDemosWon":"20.9%","notQualAfterDemo":3,"disqualifiedBeforeDemo":16,"tooEarly":2},"newMRR":55771,"metaCTR":"1.61%"},"prevLabel":"Prior Month"}}};
+
+function switchTab(key, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + key).classList.add('active');
+  btn.classList.add('active');
+}
+
+const fmt$ = n => '$' + Number(n).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const fmtN = n => Number(Math.round(n)).toLocaleString();
+const fmtP = (a,b) => b > 0 ? (a/b*100).toFixed(1)+'%' : 'N/A';
+const cpdNum = (s,d) => d > 0 ? s/d : null;
+const cpd$  = (s,d) => { const v=cpdNum(s,d); return v?fmt$(v):'N/A'; };
+
+const CH_COLORS = {meta:'#172C45',linkedin:'#1D4053',google:'#72A4BF',tiktok:'#4d8aaa',youtube:'#9bbfd4'};
+const CH_LABELS = {meta:'Meta / Facebook',linkedin:'LinkedIn',google:'Google Ads',tiktok:'TikTok',youtube:'YouTube'};
+const CH_ICONS  = {meta:'📘',linkedin:'💼',google:'🔍',tiktok:'🎵',youtube:'▶️'};
+
+// ── Delta helpers ──────────────────────────────────────────────
+function deltaNum(curr, prev) {
+  if (!prev || prev === 0) return null;
+  return (curr - prev) / Math.abs(prev);
+}
+function deltaBadge(curr, prev, { invert=false, isPercent=false }={}) {
+  const d = deltaNum(curr, prev);
+  if (d === null) return '';
+  const pct = (d * 100).toFixed(1);
+  const isUp   = d > 0.005;
+  const isDown = d < -0.005;
+  let cls, arrow;
+  if (isUp)        { cls = invert ? 'delta-down' : 'delta-up';   arrow = '▲'; }
+  else if (isDown) { cls = invert ? 'delta-up'   : 'delta-down'; arrow = '▼'; }
+  else             { cls = 'delta-flat'; arrow = '—'; }
+  const sign = d >= 0 ? '+' : '';
+  return `<span class="delta ${cls}">${arrow} ${sign}${pct}%</span>`;
+}
+function scDelta(curr, prev, { invert=false }={}) {
+  const d = deltaNum(curr, prev);
+  if (d === null) return '';
+  const pct = (d * 100).toFixed(1);
+  const isUp   = d > 0.005;
+  const isDown = d < -0.005;
+  let cls, arrow;
+  if (isUp)        { cls = invert ? 'sc-delta-down' : 'sc-delta-up';   arrow = '▲'; }
+  else if (isDown) { cls = invert ? 'sc-delta-up'   : 'sc-delta-down'; arrow = '▼'; }
+  else             { cls = 'sc-delta-flat'; arrow = '—'; }
+  const sign = d >= 0 ? '+' : '';
+  return `<span class="sc-delta ${cls}">${arrow} ${sign}${pct}%</span>`;
+}
+function parsePct(str) {
+  if (!str || str === 'N/A') return null;
+  return parseFloat(str) / 100;
+}
+
+// ── Donut SVG ──────────────────────────────────────────────────
+function buildDonut(slices, size=130, stroke=22) {
+  const r=(size-stroke)/2, cx=size/2, cy=size/2, circ=2*Math.PI*r;
+  const total=slices.reduce((s,sl)=>s+sl.value,0);
+  let offset=0, paths='';
+  slices.forEach(sl=>{
+    if(!sl.value) return;
+    const dash=(sl.value/total)*circ, gap=circ-dash;
+    paths+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${sl.color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset+=dash;
+  });
+  return `<svg width="${size}" height="${size}" style="flex-shrink:0">${paths}</svg>`;
+}
+
+// ── Intelligence Engine ─────────────────────────────────────────
+function buildIntelligence(d, p) {
+  const ch=d.channels, ga=d.ga4, pp=d.pipeline;
+  const pch=p.channels, pga=p.ga4, ppp=p.pipeline;
+  const F={alerts:[],weaknesses:[],opportunities:[],wins:[]};
+
+  const pct=(a,b)=>b>0?(a/b)*100:null;
+  const chg=(c,v)=>v>0?((c-v)/v)*100:null;
+  const fD=n=>'$'+Number(n).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const fP=(n,d=1)=>n!==null?n.toFixed(d)+'%':'N/A';
+  const ar=n=>n>0?'↑':'↓';
+  const ab=n=>Math.abs(n).toFixed(1);
+
+  // ── Data quality (always surface) ───────────────────────────
+  ['meta','google','tiktok','linkedin'].forEach(k=>{
+    if(ch[k].spend===0) F.alerts.push({
+      title:`${CH_LABELS[k]} — $0 spend recorded`,
+      desc:'No spend data received from Windsor.ai.',
+      action:'Verify campaign status and Windsor.ai connector sync.'
+    });
+  });
+  ['meta','google','tiktok'].forEach(k=>{
+    if(ch[k].spend>200&&ch[k].demos===0) F.alerts.push({
+      title:`${CH_LABELS[k]} — spend recorded, 0 demos`,
+      desc:`${fD(ch[k].spend)} spent with no attributed demos.`,
+      action:'Conversion tracking may be misconfigured in Windsor.ai. Check field mapping.'
+    });
+  });
+
+  // ── 1. CPD per channel ───────────────────────────────────────
+  const chArr=[
+    {name:'Meta',k:'meta'},{name:'TikTok',k:'tiktok'},
+    {name:'Google Ads',k:'google'},{name:'LinkedIn',k:'linkedin'}
+  ].map(c=>({...c,
+    spend:ch[c.k].spend,demos:ch[c.k].demos,
+    pSpend:pch[c.k].spend,pDemos:pch[c.k].demos,
+    cpd:ch[c.k].demos>0?ch[c.k].spend/ch[c.k].demos:null,
+    pCpd:pch[c.k].demos>0?pch[c.k].spend/pch[c.k].demos:null,
+  }));
+
+  // Best vs worst CPD gap (direct-response only)
+  const drArr=chArr.filter(c=>c.name!=='LinkedIn'&&c.cpd!==null);
+  if(drArr.length>=2){
+    const best=drArr.reduce((a,b)=>a.cpd<b.cpd?a:b);
+    const worst=drArr.reduce((a,b)=>a.cpd>b.cpd?a:b);
+    const gap=((worst.cpd-best.cpd)/best.cpd)*100;
+    if(gap>40){
+      const addDemos=Math.round(worst.spend*0.2/best.cpd);
+      F.opportunities.push({
+        title:`CPD Efficiency Gap — ${best.name} is ${gap.toFixed(0)}% cheaper than ${worst.name}`,
+        desc:`${best.name} ${fD(best.cpd)}/demo vs ${worst.name} ${fD(worst.cpd)}/demo.`,
+        action:`Shifting 20% of ${worst.name} budget (${fD(worst.spend*0.2)}) to ${best.name} could yield ~${addDemos} additional demos.`
+      });
+    }
+  }
+
+  // CPD trend + absolute thresholds per channel
+  chArr.filter(c=>c.name!=='LinkedIn').forEach(c=>{
+    if(c.cpd===null) return;
+    if(c.cpd>500) F.alerts.push({
+      title:`High CPD — ${c.name} at ${fD(c.cpd)}/demo`,
+      desc:'Above $500 direct-response threshold.',
+      action:'Review targeting and creative mix immediately.'
+    });
+    if(c.pCpd!==null){
+      const d2=chg(c.cpd,c.pCpd);
+      if(d2>25) F.weaknesses.push({
+        title:`CPD Spike — ${c.name}: ${fD(c.pCpd)} → ${fD(c.cpd)}/demo`,
+        desc:`${ar(d2)}${ab(d2)}% increase vs prior period.`,
+        action:'Investigate creative fatigue, audience saturation, or bid drift.'
+      });
+      else if(d2<-20) F.wins.push({
+        title:`CPD Improving — ${c.name}: ${fD(c.pCpd)} → ${fD(c.cpd)}/demo`,
+        desc:`${ar(d2)}${ab(d2)}% more efficient vs prior period.`,action:''
+      });
+    }
+  });
+
+  // LinkedIn CPD
+  const li=chArr.find(c=>c.name==='LinkedIn');
+  if(li&&li.cpd!==null){
+    if(li.cpd>600) F.alerts.push({
+      title:`LinkedIn CPD Critical — ${fD(li.cpd)}/demo`,
+      desc:`Spending ${fD(li.spend)} for ${Math.round(li.demos)} demos.`,
+      action:'Audit audience targeting, bid strategy, creative format. Test document ads and thought-leadership content.'
+    });
+    else if(li.cpd>400) F.weaknesses.push({
+      title:`LinkedIn CPD High — ${fD(li.cpd)}/demo`,
+      desc:'B2B SaaS benchmark is $200–350/demo.',
+      action:'Layer targeting: job title + company size + seniority. Exclude companies <10 employees.'
+    });
+    if(li.pCpd!==null){
+      const d2=chg(li.cpd,li.pCpd);
+      if(d2>20) F.weaknesses.push({
+        title:`LinkedIn Efficiency Declining — ${ar(d2)}${ab(d2)}% (${fD(li.pCpd)} → ${fD(li.cpd)})`,
+        desc:'Cost per demo rising month over month.',
+        action:'Check audience overlap across campaigns. Review creative frequency cap. Rotate audience lists.'
+      });
+    }
+  }
+
+  // ── 2. Spend concentration ───────────────────────────────────
+  const totalSpend=chArr.reduce((s,c)=>s+c.spend,0);
+  chArr.forEach(c=>{
+    const s=pct(c.spend,totalSpend);
+    if(s!==null&&s>55) F.weaknesses.push({
+      title:`Channel Concentration — ${c.name} is ${fP(s)} of budget`,
+      desc:`${fD(c.spend)} of ${fD(totalSpend)} total spend on one channel.`,
+      action:'Single-channel dependency. A policy change or CPM spike would collapse pipeline. Diversify spend.'
+    });
+  });
+
+  // ── 3. Funnel leakage ────────────────────────────────────────
+  const clickRate=pct(ga.demoButtonClicks,ga.users);
+  const bookRate=pct(ga.meetingBooked,ga.demoButtonClicks);
+  const cvr=pct(ga.meetingBooked,ga.users);
+  const pCvr=pct(pga.meetingBooked,pga.users);
+
+  if(clickRate!==null){
+    if(clickRate<3) F.weaknesses.push({
+      title:`Low Visitor-to-CTA Rate — ${fP(clickRate)} of visitors click the demo button`,
+      desc:`Only ${Math.round(ga.demoButtonClicks).toLocaleString()} clicks from ${Math.round(ga.users).toLocaleString()} visitors.`,
+      action:'Test above-the-fold headline clarity, CTA button placement, and page load speed. Target: 5%+.'
+    });
+    else if(clickRate>6) F.wins.push({
+      title:`Strong CTA Click Rate — ${fP(clickRate)} visitor-to-CTA`,
+      desc:'Page messaging is resonating with incoming traffic quality.',action:''
+    });
+  }
+  if(bookRate!==null){
+    if(bookRate<5) F.alerts.push({
+      title:`Critical Booking Drop-Off — only ${fP(bookRate)} of CTA clicks book`,
+      desc:`Losing ~${Math.round(ga.demoButtonClicks*(1-bookRate/100))} potential bookings at the scheduling step.`,
+      action:'Test: embed Calendly inline vs redirect, reduce required fields, show next available slot immediately.'
+    });
+    else if(bookRate<15) F.weaknesses.push({
+      title:`Booking Friction — ${fP(bookRate)} click-to-book`,
+      desc:`~${Math.round(ga.demoButtonClicks*(1-bookRate/100))} clicks not converting to booked demos.`,
+      action:'A/B test scheduling page: urgency copy, social proof, fewer required fields.'
+    });
+    else if(bookRate>25) F.wins.push({
+      title:`High Booking Conversion — ${fP(bookRate)} of CTA clicks book`,
+      desc:'Scheduling experience is working well. Protect this step.',action:''
+    });
+  }
+  if(cvr!==null&&pCvr!==null){
+    const d2=chg(cvr,pCvr);
+    if(d2<-15) F.alerts.push({
+      title:`Website CVR Declining — ${fP(pCvr,2)} → ${fP(cvr,2)}`,
+      desc:`${ar(d2)}${ab(d2)}% vs prior period.`,
+      action:'Could be: traffic quality drop, landing page regression, or scheduling tool issue. Segment by source to isolate.'
+    });
+    else if(d2>15) F.wins.push({
+      title:`CVR Improving — ${fP(pCvr,2)} → ${fP(cvr,2)}`,
+      desc:`${ar(d2)}${ab(d2)}% vs prior period. Landing page or traffic quality improving.`,action:''
+    });
+  }
+
+  // ── 4. Pipeline health ───────────────────────────────────────
+  const {demosToOccur,demosHappened,dealsWon,notQualAfterDemo,disqualifiedBeforeDemo,tooEarly}=pp;
+  const {demosToOccur:pDTO,demosHappened:pDH,dealsWon:pDW,disqualifiedBeforeDemo:pDqB,notQualAfterDemo:pNQA}=ppp;
+
+  const showRate=pct(demosHappened,demosToOccur);
+  if(showRate!==null){
+    if(showRate<60) F.alerts.push({
+      title:`Critical Show Rate — only ${fP(showRate)} of booked demos happen`,
+      desc:`${demosToOccur-demosHappened} no-shows or cancellations (${demosHappened}/${demosToOccur}).`,
+      action:'Add: 24hr + 1hr SMS reminder, confirmation email with prep materials, AE personal outreach day-of.'
+    });
+    else if(showRate<78) F.weaknesses.push({
+      title:`Show Rate Below Target — ${fP(showRate)} (target: 80%+)`,
+      desc:`${demosHappened}/${demosToOccur} demos occurring.`,
+      action:'Review reminder sequence timing. Add a 2hr pre-demo email with 3 questions to answer before the call.'
+    });
+    else F.wins.push({
+      title:`Solid Show Rate — ${fP(showRate)} of booked demos happen`,
+      desc:`${demosHappened}/${demosToOccur} demos occurring. Reminder sequence is working.`,action:''
+    });
+  }
+
+  const dqBR=pct(disqualifiedBeforeDemo,demosToOccur);
+  const pDqBR=pct(pDqB,pDTO);
+  if(dqBR!==null){
+    if(dqBR>25) F.alerts.push({
+      title:`High Pre-Demo Disqualification — ${fP(dqBR)} cancelled before demo`,
+      desc:`${disqualifiedBeforeDemo}/${demosToOccur} deals disqualified before occurring.`,
+      action:'Add ICP filters to booking form: "How long has your brand been selling?" and "Monthly ad spend?" Disqualify pre-launch brands at scheduling, not after.'
+    });
+    else if(dqBR>12) F.weaknesses.push({
+      title:`Pre-Demo Disq Elevated — ${disqualifiedBeforeDemo} cancelled (${fP(dqBR)})`,
+      desc:'Leads aren\'t passing intake review.',
+      action:'Add 1–2 qualifying questions to Calendly page. Review recent disq reasons for patterns.'
+    });
+  }
+  if(dqBR!==null&&pDqBR!==null){
+    const d2=chg(dqBR,pDqBR);
+    if(d2>30) F.weaknesses.push({
+      title:`Pre-Demo Disq Worsening — ${fP(pDqBR)} → ${fP(dqBR)}`,
+      desc:`${ar(d2)}${ab(d2)}% change vs prior period.`,
+      action:'Targeting may be drifting toward unqualified audiences. Cross-reference campaign launches with disq spike timing.'
+    });
+  }
+
+  const dqAR=pct(notQualAfterDemo,demosHappened);
+  if(dqAR!==null&&dqAR>25) F.weaknesses.push({
+    title:`High Post-Demo Disqualification — ${fP(dqAR)} of demos result in "Not Qualified"`,
+    desc:`${notQualAfterDemo}/${demosHappened} demos not converting.`,
+    action:'Discovery questions aren\'t surfacing disqualifiers early. Add a pre-demo questionnaire. Review top disq reasons with sales weekly.'
+  });
+
+  if(tooEarly>0){
+    const ter=pct(tooEarly,demosHappened);
+    const estFW=Math.round(tooEarly*(dealsWon/Math.max(demosHappened,1)));
+    if(ter!==null&&ter>15) F.opportunities.push({
+      title:`Large Nurture Pipeline — ${tooEarly} deals marked "Too Early" (${fP(ter)})`,
+      desc:`At current close rates, ~${estFW} of these could close with proper follow-up.`,
+      action:'Add all to 30/60/90-day email sequence immediately. This is warm, paid-for pipeline being abandoned.'
+    });
+    else F.opportunities.push({
+      title:`Nurture Pipeline — ${tooEarly} deals marked "Too Early"`,
+      desc:'Warm prospects who need more time before closing.',
+      action:'Ensure all have follow-up tasks at 30 and 60 days. Don\'t let warm pipeline go cold.'
+    });
+  }
+
+  const closeRate=pct(dealsWon,demosHappened);
+  const pCloseRate=pct(pDW,pDH);
+  if(closeRate!==null){
+    if(closeRate<10) F.weaknesses.push({
+      title:`Low Close Rate — ${fP(closeRate)} demo-to-close`,
+      desc:`${dealsWon}/${demosHappened} demos converting to closed won.`,
+      action:'Review: proposals sent same-day? Urgency/deadline present? Analyze objection patterns. Add a follow-up call 48hrs post-demo.'
+    });
+    else if(closeRate>20) F.wins.push({
+      title:`Strong Close Rate — ${fP(closeRate)} demo-to-close`,
+      desc:`${dealsWon}/${demosHappened} demos closing. Sales team converting well.`,action:''
+    });
+    if(pCloseRate!==null){
+      const d2=chg(closeRate,pCloseRate);
+      if(d2<-20) F.weaknesses.push({
+        title:`Close Rate Declining — ${fP(pCloseRate)} → ${fP(closeRate)}`,
+        desc:`${ar(d2)}${ab(d2)}% vs prior period.`,
+        action:'Check: pricing pushback, proposal quality, follow-up speed post-demo.'
+      });
+      else if(d2>20) F.wins.push({
+        title:`Close Rate Improving — ${fP(pCloseRate)} → ${fP(closeRate)}`,
+        desc:`${ar(d2)}${ab(d2)}% vs prior period. Sales execution improving.`,action:''
+      });
+    }
+  }
+
+  // ── 5. Revenue velocity ──────────────────────────────────────
+  const mrrPD=demosHappened>0?d.newMRR/demosHappened:null;
+  const pMrrPD=pDH>0?p.newMRR/pDH:null;
+  if(mrrPD!==null&&pMrrPD!==null){
+    const d2=chg(mrrPD,pMrrPD);
+    if(d2<-20) F.weaknesses.push({
+      title:`Deal Size Shrinking — MRR/demo ${fD(pMrrPD)} → ${fD(mrrPD)}`,
+      desc:`${ar(d2)}${ab(d2)}% decline in average deal value.`,
+      action:'Targeting changes may be pulling in smaller companies. Review new traffic sources and audience composition.'
+    });
+    else if(d2>20) F.wins.push({
+      title:`Deal Size Growing — MRR/demo ${fD(pMrrPD)} → ${fD(mrrPD)}`,
+      desc:`${ar(d2)}${ab(d2)}% larger deals closing. Larger accounts in pipeline.`,action:''
+    });
+  }
+  if(d.newMRR>0&&p.newMRR>0){
+    const d2=chg(d.newMRR,p.newMRR);
+    if(d2>20) F.wins.push({
+      title:`Strong MRR Growth — ${fD(d.newMRR)} vs ${fD(p.newMRR)} prior`,
+      desc:`${ar(d2)}${ab(d2)}% revenue growth period over period.`,action:''
+    });
+    else if(d2<-15) F.alerts.push({
+      title:`MRR Declining — ${fD(d.newMRR)} vs ${fD(p.newMRR)} prior period`,
+      desc:`${ar(d2)}${ab(d2)}% revenue drop.`,
+      action:'Diagnose: is pipeline volume, close rate, or deal size declining? Each has a different fix.'
+    });
+  }
+
+  // ── 6. Meta creative health ──────────────────────────────────
+  if(ch.meta.ctrAvg!=null){
+    const ctr=ch.meta.ctrAvg;
+    const pCtr=pch.meta.ctrAvg;
+    if(ctr<0.008) F.weaknesses.push({
+      title:`Meta CTR Low — ${(ctr*100).toFixed(2)}%`,
+      desc:'Below 0.8% average CTR signals creative fatigue or audience mismatch.',
+      action:'Refresh top 3 highest-spend creatives. Test UGC-style vs polished. Try new hook angles: pain-point vs aspirational outcome.'
+    });
+    else if(ctr>0.018) F.wins.push({
+      title:`Strong Meta CTR — ${(ctr*100).toFixed(2)}%`,
+      desc:'Creative is resonating. Scale top performers before fatigue sets in.',action:''
+    });
+    if(pCtr!=null){
+      const d2=chg(ctr,pCtr);
+      if(d2<-20) F.weaknesses.push({
+        title:`Meta CTR Declining — ${(pCtr*100).toFixed(2)}% → ${(ctr*100).toFixed(2)}%`,
+        desc:`${ar(d2)}${ab(d2)}% drop. Audience has seen your ads too many times.`,
+        action:'Rotate creative immediately. TikTok-native style content is converting for wellness brands right now.'
+      });
+    }
+  }
+
+  // ── 7. Pipeline volume trend ─────────────────────────────────
+  if(demosToOccur>0&&pDTO>0){
+    const d2=chg(demosToOccur,pDTO);
+    if(d2>20) F.wins.push({
+      title:`Pipeline Growing — ${demosToOccur} demos vs ${pDTO} prior`,
+      desc:`${ar(d2)}${ab(d2)}% growth. Demand is accelerating.`,action:''
+    });
+    else if(d2<-15) F.alerts.push({
+      title:`Pipeline Contracting — ${demosToOccur} demos vs ${pDTO} prior`,
+      desc:`${ar(d2)}${ab(d2)}% drop in pipeline volume.`,
+      action:'Check CPD trend and budget allocation. If spend held steady, efficiency dropped. If spend dropped, budget was cut.'
+    });
+  }
+
+  // ── 8. YouTube untracked spend ───────────────────────────────
+  const ytShare=pct(ch.youtube.spend,totalSpend);
+  if(ytShare!==null&&ytShare>8&&ch.youtube.demos===0) F.weaknesses.push({
+    title:`YouTube: Untracked ROI — ${fD(ch.youtube.spend)} (${ytShare.toFixed(0)}% of budget)`,
+    desc:'0 demos attributed to YouTube in Windsor.ai.',
+    action:'YouTube is brand-awareness only here. If brand lift isn\'t being measured, consider reallocating to direct-response channels.'
+  });
+
+  // ── 9. Overall CPD trend ─────────────────────────────────────
+  const drS=ch.meta.spend+ch.tiktok.spend+ch.google.spend;
+  const drD=ch.meta.demos+ch.tiktok.demos+ch.google.demos;
+  const pDrS=pch.meta.spend+pch.tiktok.spend+pch.google.spend;
+  const pDrD=pch.meta.demos+pch.tiktok.demos+pch.google.demos;
+  const oCPD=drD>0?drS/drD:null, pOCPD=pDrD>0?pDrS/pDrD:null;
+  if(oCPD!==null&&pOCPD!==null){
+    const d2=chg(oCPD,pOCPD);
+    if(d2>20) F.weaknesses.push({
+      title:`Overall CPD Rising — ${fD(pOCPD)} → ${fD(oCPD)}/demo`,
+      desc:`${ar(d2)}${ab(d2)}% worse vs prior period. Across-the-board efficiency loss.`,
+      action:'Likely causes: creative fatigue, seasonal CPM increase, or audience exhaustion. Check top-spend ad frequency.'
+    });
+    else if(d2<-15) F.wins.push({
+      title:`Overall CPD Improving — ${fD(pOCPD)} → ${fD(oCPD)}/demo`,
+      desc:`${ar(d2)}${ab(d2)}% better vs prior period. Media efficiency gaining across all channels.`,action:''
+    });
+  }
+
+  return F;
+}
+
+// ── Render Intelligence HTML ────────────────────────────────────
+function renderIntelligence(F, prevLabel) {
+  const CATS=[
+    {key:'alerts',       label:'🚨  Alerts — Requires Immediate Attention', cls:'intel-cat-alert', icon:'🚨', pillCls:'isp-alert', pillLabel:'Alerts'},
+    {key:'weaknesses',   label:'⚠️  Weaknesses — Underperformance to Address', cls:'intel-cat-weak', icon:'⚠️', pillCls:'isp-weak', pillLabel:'Weaknesses'},
+    {key:'opportunities',label:'🎯  Opportunities — Actionable Upside',        cls:'intel-cat-opp',  icon:'🎯', pillCls:'isp-opp',  pillLabel:'Opportunities'},
+    {key:'wins',         label:'✅  Wins — What\'s Working',                   cls:'intel-cat-win',  icon:'✅', pillCls:'isp-win',  pillLabel:'Wins'},
+  ];
+  const total=CATS.reduce((s,c)=>s+F[c.key].length,0);
+  if(total===0) return '<div class="intel-empty">No significant signals detected. All metrics within normal ranges.</div>';
+
+  const pillsHTML=CATS.filter(c=>F[c.key].length>0).map(c=>`
+    <div class="intel-summary-pill ${c.pillCls}">
+      <span class="isp-count">${F[c.key].length}</span>
+      <span>${c.icon} ${c.pillLabel}</span>
+    </div>`).join('');
+
+  const catsHTML=CATS.filter(c=>F[c.key].length>0).map(cat=>`
+    <div class="intel-category ${cat.cls}">
+      <div class="intel-cat-label">${cat.label}</div>
+      <div class="intel-cards">
+        ${F[cat.key].map(f=>`
+          <div class="intel-card">
+            <div class="intel-icon">${cat.icon}</div>
+            <div>
+              <div class="intel-title">${f.title}</div>
+              ${f.desc?`<div class="intel-desc">${f.desc}</div>`:''}
+              ${f.action?`<div class="intel-action">→ ${f.action}</div>`:''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  return `<div class="intel-summary-bar">${pillsHTML}</div>${catsHTML}`;
+}
+
+// ── Build panel ────────────────────────────────────────────────
+function buildPanel(key, d) {
+  const ch=d.channels, ga=d.ga4, pp=d.pipeline;
+  const p=d.prev, pch=p.channels, pga=p.ga4, ppp=p.pipeline;
+  const prevLabel=d.prevLabel||'prior period';
+
+  // Direct-response spend/demos (excl LI + YT)
+  const drSpend=ch.meta.spend+ch.google.spend+ch.tiktok.spend;
+  const drDemos=ch.meta.demos+ch.google.demos+ch.tiktok.demos;
+  const pdrSpend=pch.meta.spend+pch.google.spend+pch.tiktok.spend;
+  const pdrDemos=pch.meta.demos+pch.google.demos+pch.tiktok.demos;
+
+  // Intelligence
+  const intelHTML=renderIntelligence(buildIntelligence(d,p), prevLabel);
+
+  // Dark stat cards — Total Spend excl LI+YT, MRR, Blended CPD
+  const statHTML=`
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="sc-label">Total Ad Spend</div>
+        <div class="sc-value">${fmt$(drSpend)}</div>
+        <div class="sc-sub">Excl. LinkedIn + YouTube</div>
+        ${scDelta(drSpend, pdrSpend, {invert:true})}
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">New MRR</div>
+        <div class="sc-value">${fmt$(d.newMRR)}</div>
+        <div class="sc-sub">Closed won this period</div>
+        ${scDelta(d.newMRR, p.newMRR)}
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Blended CPD</div>
+        <div class="sc-value">${cpd$(drSpend,drDemos)}</div>
+        <div class="sc-sub">Excl. LinkedIn + YouTube</div>
+        ${scDelta(cpdNum(drSpend,drDemos)||0, cpdNum(pdrSpend,pdrDemos)||0, {invert:true})}
+      </div>
+    </div>`;
+
+  // KPIs with delta badges
+  const kpis=[
+    {label:'Demos Booked',    value:fmtN(d.demosBooked),             sub:'Meeting Booked list, by createdate', cls:'kpi-navy',
+      delta: deltaBadge(d.demosBooked, p.demosBooked)},
+    {label:'Website Visitors',value:fmtN(Math.round(ga.users)),      sub:'GA4 sessions',                 cls:'',
+      delta: deltaBadge(ga.users, pga.users)},
+    {label:'Website CVR',     value:fmtP(ga.meetingBooked,ga.users), sub:'Visitors → demo booked',        cls:'',
+      delta: deltaBadge(ga.users>0?ga.meetingBooked/ga.users:0, pga.users>0?pga.meetingBooked/pga.users:0)},
+    {label:'Meta CTR',        value:d.metaCTR||'N/A',                sub:'Avg across campaigns',          cls:'',
+      delta: deltaBadge(parsePct(d.metaCTR)||0, parsePct(p.metaCTR)||0)},
+    {label:'Closed Deals',    value:fmtN(pp.dealsWon),               sub:'Closed won this period',        cls:'kpi-good',
+      delta: deltaBadge(pp.dealsWon, ppp.dealsWon)},
+    {label:'Close Rate',      value:pp.pctDemosWon,                  sub:'Demos given → closed won',      cls:'kpi-good',
+      delta: deltaBadge(parsePct(pp.pctDemosWon)||0, parsePct(ppp.pctDemosWon)||0)},
+  ];
+  const kpiHTML=kpis.map(k=>`
+    <div class="kpi ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+      ${k.delta}
+    </div>`).join('');
+
+  // Spend donut + bars — excl LI+YT for totals
+  const chKeys=['meta','linkedin','google','tiktok','youtube'];
+  const drKeys=['meta','google','tiktok'];
+  const spendSlices=chKeys.map(k=>({label:CH_LABELS[k],value:ch[k].spend,color:CH_COLORS[k]})).filter(s=>s.value>0);
+  const donutSVG=buildDonut(spendSlices);
+  const legendHTML=spendSlices.map(s=>`
+    <div class="leg-item">
+      <div class="leg-dot" style="background:${s.color}"></div>
+      <div class="leg-name">${s.label}</div>
+      <div class="leg-pct">${fmtP(s.value,drSpend)}</div>
+    </div>`).join('');
+
+  const sorted=chKeys.map(k=>({key:k,...ch[k]})).sort((a,b)=>b.spend-a.spend);
+  const maxSpend=sorted[0]?.spend||1;
+  const spendSummaryHTML=`
+    <div class="spend-summary">
+      <div class="ss-item">
+        <div class="ss-label">Total Spend</div>
+        <div class="ss-value">${fmt$(drSpend)}</div>
+        <div class="ss-sub">Excl. LinkedIn + YouTube</div>
+      </div>
+      <div class="ss-item">
+        <div class="ss-label">Avg CPD</div>
+        <div class="ss-value">${cpd$(drSpend,drDemos)}</div>
+        <div class="ss-sub">Excl. LinkedIn + YouTube</div>
+      </div>
+      <div class="ss-item">
+        <div class="ss-label">Total Demos</div>
+        <div class="ss-value">${fmtN(drDemos)}</div>
+        <div class="ss-sub">Meta + Google + TikTok</div>
+      </div>
+    </div>`;
+  const barsHTML=sorted.map(c=>`
+    <div class="bar-row">
+      <div class="bar-name">${CH_ICONS[c.key]} ${CH_LABELS[c.key]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c.spend/maxSpend*100).toFixed(1)}%;background:${CH_COLORS[c.key]}"></div></div>
+      <div class="bar-val">${fmt$(c.spend)}</div>
+    </div>`).join('');
+
+  // CPD table
+  const cpdRows=sorted.map(c=>{
+    const v=cpdNum(c.spend,c.demos);
+    const badge=v===null?'<span class="badge badge-na">N/A</span>'
+               :v>600?`<span class="badge badge-warn">${fmt$(v)}</span>`
+               :`<span class="badge badge-good">${fmt$(v)}</span>`;
+    return `<tr>
+      <td>${CH_ICONS[c.key]} ${CH_LABELS[c.key]}</td>
+      <td>${fmt$(c.spend)}</td>
+      <td>${fmtN(c.demos)}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  // Funnel — each step uses its own correct HubSpot date field
+  const fSteps=[
+    {name:'Website Visitors',  val:Math.round(ga.users),             prev:Math.round(pga.users),              color:'#9bbfd4'},
+    {name:'Clicked Demo',      val:Math.round(ga.demoButtonClicks),  prev:Math.round(pga.demoButtonClicks),   color:'#72A4BF'},
+    {name:'Demos Booked',      val:d.demosBooked,                    prev:p.demosBooked,                      color:'#4d8aaa'},
+    {name:'Demos to Occur',    val:pp.demosToOccur,                  prev:ppp.demosToOccur,                   color:'#2d6a8a'},
+    {name:'Demo Happened',     val:pp.demosHappened,                 prev:ppp.demosHappened,                  color:'#1D4053'},
+    {name:'Closed Won',        val:pp.dealsWon,                      prev:ppp.dealsWon,                       color:'#172C45'},
+  ];
+  const maxF=Math.max(fSteps[0]?.val||1,1);
+  const funnelHTML=fSteps.map((s,i)=>{
+    const pct=Math.max((s.val/maxF)*100,3);
+    const isShort=pct<30;
+    const db=deltaBadge(s.val,s.prev);
+    // Number always visible: white inside bar if bar is wide, dark outside if narrow
+    const numSpan=isShort
+      ? `<span style="position:absolute;left:calc(${pct.toFixed(1)}% + 10px);top:50%;transform:translateY(-50%);font-size:14px;font-weight:700;color:var(--deep-navy);white-space:nowrap;z-index:2">${fmtN(s.val)}</span>`
+      : `<span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:700;color:#fff;white-space:nowrap;z-index:2">${fmtN(s.val)}</span>`;
+    return `
+      <div class="funnel-step">
+        <div class="funnel-name">${s.name}</div>
+        <div style="position:relative;flex:1">
+          <div class="funnel-track" style="overflow:visible">
+            <div class="funnel-bar" style="width:${pct.toFixed(1)}%;background:${s.color};position:relative;overflow:visible">
+            </div>
+          </div>
+          ${numSpan}
+        </div>
+        <div class="funnel-cvr-col">
+          ${i===0
+            ? `<span class="funnel-cvr-val">—</span>`
+            : `<span class="funnel-cvr-val">${fmtP(s.val,fSteps[i-1].val)}</span><span class="funnel-cvr-lbl">from prev.</span>`
+          }
+          ${db}
+        </div>
+      </div>
+      ${i<fSteps.length-1?'<div class="funnel-connector">▼</div>':''}`;
+  }).join('');
+
+  // Pipeline
+  const plRows=[
+    {name:'Demos Booked',         val:d.demosBooked,             prev:p.demosBooked,             color:'#72A4BF', note:'Meeting Booked list, by createdate'},
+    {name:'Demos to Occur',       val:pp.demosToOccur,           prev:ppp.demosToOccur,          color:'#4d8aaa', note:'deals by date_demo_booked'},
+    {name:'Demo Happened',        val:pp.demosHappened,          prev:ppp.demosHappened,         color:'#1D4053', note:'deals by date_demo_booked'},
+    {name:'Closed Won',           val:pp.dealsWon,               prev:ppp.dealsWon,              color:'#172C45', note:'deals by date_demo_booked, closedwon'},
+    {name:'Disq. Before Demo',    val:pp.disqualifiedBeforeDemo, prev:ppp.disqualifiedBeforeDemo,color:'#B8860B', invert:true},
+    {name:'Not Qual. After Demo', val:pp.notQualAfterDemo,       prev:ppp.notQualAfterDemo,      color:'#c8a04a', invert:true},
+    {name:'Too Early',            val:pp.tooEarly,               prev:ppp.tooEarly,              color:'#aab8c2', invert:true},
+  ];
+  const maxPL2=Math.max(d.demosBooked,1);
+  const plHTML=plRows.map(r=>`
+    <div class="pl-row">
+      <div class="pl-name">${r.name}${r.note?`<span style="display:block;font-size:9px;color:#8a9aaa;font-style:italic">${r.note}</span>`:''}</div>
+      <div class="pl-track"><div class="pl-fill" style="width:${Math.min((r.val/maxPL2)*100,100).toFixed(1)}%;background:${r.color}"></div></div>
+      <div class="pl-val">${fmtN(r.val)}</div>
+      ${deltaBadge(r.val, r.prev, {invert: !!r.invert})}
+    </div>`).join('');
+
+  return `
+    <div class="sl">Intelligence Report <span style="font-size:10px;color:#8a9aaa;font-weight:400;letter-spacing:0;text-transform:none">vs ${prevLabel}</span></div>
+    <div style="margin-bottom:32px">${intelHTML}</div>
+
+    ${statHTML}
+
+    <div class="sl">Key Performance Indicators <span style="font-size:10px;color:#8a9aaa;font-weight:400;letter-spacing:0;text-transform:none">vs ${prevLabel}</span></div>
+    <div class="kpi-grid">${kpiHTML}</div>
+
+    <div class="sl">Spend &amp; Cost Efficiency</div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Ad Spend by Channel</div>
+        ${spendSummaryHTML}
+        <div class="donut-wrap">${donutSVG}<div class="donut-legend">${legendHTML}</div></div>
+        <div class="bar-chart">${barsHTML}</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Cost Per Demo by Channel</div>
+        <table class="cpd-table">
+          <thead><tr><th>Channel</th><th>Spend</th><th>Demos</th><th>CPD</th></tr></thead>
+          <tbody>${cpdRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sl">Demo Pipeline</div>
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Conversion Funnel <span class="chart-title-meta">step-to-step CVR vs ${prevLabel}</span></div>
+        <div class="funnel">${funnelHTML}</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Pipeline Breakdown <span class="chart-title-meta">vs ${prevLabel}</span></div>
+        <div class="pl-grid">${plHTML}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Init
+document.getElementById('gen-time').textContent = DATA.generatedAt;
+document.getElementById('footer-file').textContent = DATA.filename ? `Source: ${DATA.filename}` : '';
+Object.entries(DATA.windows).forEach(([key,d]) => {
+  document.getElementById('panel-' + key).innerHTML = buildPanel(key, d);
+});
+</script>
+</body>
+</html>
